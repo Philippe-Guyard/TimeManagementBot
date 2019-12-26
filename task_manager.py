@@ -1,5 +1,23 @@
+import constants
+import json
+
 mode = dict()
 tasks = dict()
+
+def load_tasks():
+    global tasks
+    with open(constants.json_storage, 'r') as f:
+        s = f.readline()
+        if s is not None and len(s) > 0:
+            tasks = json.loads(s)
+    
+    #convert all user id's to int
+    tasks = {int(key):value for key, value in tasks.items()}
+
+def save_tasks():
+    global tasks
+    with open(constants.json_storage, 'w') as f:
+        f.write(json.dumps(tasks))
 
 def is_add_task(user_id):
     return user_id in mode and mode[user_id] == 'ADD_TASK'
@@ -16,6 +34,8 @@ def finish_add_tast(user_id, task_name):
         tasks[user_id].append(task_name)
     else:
         tasks[user_id] = [task_name]
+    
+    save_tasks()
 
 def remove_task(user_id, task_name):
     if user_id in tasks:
@@ -25,6 +45,8 @@ def remove_task(user_id, task_name):
             return False 
     else:
         return False
+    
+    save_tasks()
 
 #returns all user tasks inside list
 def get_tasks(user_id):

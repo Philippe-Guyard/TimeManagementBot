@@ -4,6 +4,8 @@ import task_manager
 import telebot
 from telebot import types
 
+task_manager.load_tasks()
+
 bot = telebot.TeleBot(bot_token)
 
 get_sender_id = lambda msg: msg.from_user.id
