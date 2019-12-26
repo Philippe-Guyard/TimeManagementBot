@@ -1,0 +1,4 @@
+First priority:
+-Create a 'Task' class and modify show method so that it shows tasks as buttons
+-When you click on a 'Task' button it shows more info about the tasks
+-Task class can have name, deadline, type (daily, weekly) etc...
