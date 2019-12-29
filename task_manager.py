@@ -26,6 +26,8 @@ def add_task(user_id, task_name):
         tasks[user_id].append(task_name)
     else:
         tasks[user_id] = [task_name]
+    
+    save_tasks()
 
 def remove_task(user_id, task_name):
     if user_id in tasks:

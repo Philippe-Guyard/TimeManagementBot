@@ -82,24 +82,27 @@ def main():
         tasks = task_manager.get_tasks(uid)
 
         markup = types.InlineKeyboardMarkup(row_width=3)
-        btns = [types.InlineKeyboardButton(task, callback_data=task) for task in tasks]
+        btns = [types.InlineKeyboardButton(task, callback_data=str(idx)) for idx, task in enumerate(tasks)]
         markup.add(*btns)
 
-        keyboard_message = bot.send_message(cid, 'Что удалить?', btns, reply_markup=markup)
+        keyboard_message = bot.send_message(cid, 'Что удалить?', reply_markup=markup)
 
         @bot.callback_query_handler(func=lambda call: True)
         def remove(call):
             logging.info('Removing task \'{0}\' from user {1}'.format(call.data, uid))
 
-            task_manager.remove_task(uid, call.data)
-            bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(call.data))
+            nonlocal tasks
+            task_name = tasks[int(call.data)]
+            task_manager.remove_task(uid, task_name)
+            bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(task_name))
 
             new_tasks = task_manager.get_tasks(uid)
             if tasks != new_tasks:
                 new_markup = types.InlineKeyboardMarkup(row_width=3)
-                btns = [types.InlineKeyboardButton(task, callback_data=task) for task in new_tasks]
+                btns = [types.InlineKeyboardButton(task, callback_data=str(idx)) for idx, task in enumerate(new_tasks)]
                 new_markup.add(*btns)
                 bot.edit_message_reply_markup(chat_id=cid, message_id=keyboard_message.message_id, reply_markup = new_markup)
+                tasks = new_tasks
 
     #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)
