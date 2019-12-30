@@ -66,7 +66,7 @@ def main():
         def process_task_name(task_msg):
             task_text = task_msg.text
             task_manager.add_task(get_sender_id(task_msg), task_text)
-            logging.info('Added task {0} to user {1}'.format(task_text, get_sender_id(task_msg)))
+            logging.info('Added task \'{0}\' to user {1}'.format(task_text, get_sender_id(task_msg)))
             bot.send_message(get_chat_id(task_msg), 'Задача \'{0}\' добавлена успешно!'.format(task_text))
 
         bot.register_next_step_handler(msg, process_task_name)
@@ -89,10 +89,20 @@ def main():
 
         @bot.callback_query_handler(func=lambda call: True)
         def remove(call):
-            logging.info('Removing task \'{0}\' from user {1}'.format(call.data, uid))
+            if not task_manager.has_tasks(uid):
+                return
 
             nonlocal tasks
-            task_name = tasks[int(call.data)]
+            task_name = ''
+            try:
+                task_name = tasks[int(call.data)]
+            except IndexError:
+                logging.error('Index error occured, aborting remove task...')
+                logging.error('Tasks: {0}; index: {1}'.format(tasks, call.data))
+                bot.send_message(cid, 'Возникла внутреняя ошибка. Попробуйте позже...')
+                return
+                
+            logging.info('Removing task \'{0}\' from user {1}'.format(task_name, uid))
             task_manager.remove_task(uid, task_name)
             bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(task_name))
 
@@ -110,7 +120,7 @@ def main():
         sender_id = get_sender_id(message)
         text = message.text
         chat_id = message.chat.id
-        logging.info('Got unknown text {0} from user {1}'.format(text, sender_id))
+        logging.info('Got unknown text \'{0}\' from user {1}'.format(text, sender_id))
         bot.send_message(chat_id, 'Понял')    
 
     bot.enable_save_next_step_handlers(delay=2)

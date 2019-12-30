@@ -132,3 +132,5 @@ dmypy.json
 data.txt
 .handler-saves/
 Logs/
+myenv/
+my_env/
