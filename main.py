@@ -5,8 +5,10 @@ import telebot
 from telebot import types
 
 import sys, os, logging, shutil
+force_overwrite = '-n' in sys.argv # '-n' stands for "no"
+
 #config logger
-if os.path.exists(constants.logs):
+if not force_overwrite and os.path.exists(constants.logs):
     response = input('{0} already exists. Do you want to save it? (y/n) '.format(constants.logs))
     save_prev = response.lower().startswith('y')
     if save_prev:
@@ -101,7 +103,7 @@ def main():
                 logging.error('Tasks: {0}; index: {1}'.format(tasks, call.data))
                 bot.send_message(cid, 'Возникла внутреняя ошибка. Попробуйте позже...')
                 return
-                
+
             logging.info('Removing task \'{0}\' from user {1}'.format(task_name, uid))
             task_manager.remove_task(uid, task_name)
             bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(task_name))
