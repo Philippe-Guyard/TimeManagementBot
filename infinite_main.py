@@ -3,19 +3,18 @@
 from subprocess import Popen
 import sys, time
 
-filename = sys.argv[1]
 args = []
 if len(sys.argv) > 1:
-    args = sys.argv[2:]
+    args = sys.argv[1:]
 args = ' '.join(args)
-python_args = 'python ' + filename
+python_args = 'python main.py'
 if len(args) > 0:
     python_args += ' ' + args
 
 prc = Popen(python_args, shell=True)
 prc.wait() #First exception. We want to save this log
 
-python_args = 'python {0} --disable-logging --sorry' #we don't want the logs of all programs. Also notify me about crash
+python_args = 'python main.py --disable-logging --sorry' #we don't want the logs of all programs. Also notify me about crash
 retry = 0
 while True:
     start = time.time()

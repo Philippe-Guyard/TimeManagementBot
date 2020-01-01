@@ -129,7 +129,7 @@ def main():
                 btns = [types.InlineKeyboardButton(task, callback_data=str(idx)) for idx, task in enumerate(new_tasks)]
                 new_markup.add(*btns)
                 bot.edit_message_reply_markup(chat_id=cid, message_id=keyboard_message.message_id, reply_markup = new_markup)
-                tasks = new_tasks
+                tasks = list(new_tasks)
 
     #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)
@@ -142,7 +142,7 @@ def main():
 
     bot.enable_save_next_step_handlers(delay=2)
     bot.load_next_step_handlers()
-    bot.infinity_polling(True)     
+    bot.infinity_polling(False)     
 
 if __name__ == "__main__":
     main()
