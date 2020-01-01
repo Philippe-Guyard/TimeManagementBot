@@ -2,6 +2,9 @@ First priority:
 -Create a 'Task' class and modify show method so that it shows tasks as buttons
 -When you click on a 'Task' button it shows more info about the tasks
 -Task class can have name, deadline, type (daily, weekly) etc...
+-Create JSON encoder/decoder for Task class
+-Make a counter for all the completed tasks to track progress?
+-Create a 'Project' class which has multiple tasks. A project also has completion percentage
 
 Task class:
 -Name

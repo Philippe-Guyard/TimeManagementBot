@@ -4,15 +4,21 @@ import task_manager
 import telebot
 from telebot import types
 
-import sys, os, logging, shutil
-force_overwrite = '-n' in sys.argv # '-n' stands for "no"
+import sys, os, logging, shutil, time
 
-#config logger
-if not force_overwrite and os.path.exists(constants.logs):
+send_sorry = '--sorry' in sys.argv
+
+if '-n' in sys.argv or '--no' in sys.argv: #overwrite previous logs
+    pass
+elif '-y' in sys.argv or '--yes' in sys.argv:
+    if os.path.exists(constants.logs):
+        shutil.copy(constants.logs, constants.logs)
+elif os.path.exists(constants.logs) and not '--disable-logging' in sys.argv:
     response = input('{0} already exists. Do you want to save it? (y/n) '.format(constants.logs))
     save_prev = response.lower().startswith('y')
     if save_prev:
         shutil.copy(constants.logs, constants.logs_backup)
+
 logging.basicConfig(
     handlers=[logging.FileHandler(constants.logs, 'w', 'utf-8')],
     format='%(levelname)s - %(asctime)s - %(message)s', level=logging.INFO)
@@ -37,13 +43,21 @@ def main():
     bot = telebot.TeleBot(constants.bot_token)
     bot.set_update_listener(listener)
 
-    def remove_markup(message, txt='Хорошо!'):
-        markup = types.ReplyKeyboardRemove(selective=False)
-        bot.send_message(message.chat.id, text=txt, reply_markup=markup)
+    if send_sorry:
+        bot.send_message(constants.my_chat_id, 'Произошла неизвестная ошибка в работе бота. Вот последние логи:')
+
+        if not os.path.exists('Logs/app.log'):
+            open('Logs/app.log', 'w').close() #create the file if it doesn't exist
+        log_data = open('Logs/app.log', 'rb')
+        bot.send_document(constants.my_chat_id, data=log_data)
     
-    @bot.message_handler(commands=['start'])
-    def welcome(message):
-        bot.reply_to(message, 'Привет!')
+    @bot.message_handler(commands=['throw'])
+    def throw(message):
+        raise IndexError()
+
+    @bot.message_handler(commands=['ping'])
+    def pong(message):
+        bot.reply_to(message, 'pong')
 
     @bot.message_handler(commands=['show_tasks'])
     def show_tasks(message):
@@ -55,7 +69,7 @@ def main():
         if task_manager.has_tasks(sender_id):
             text = task_manager.show_tasks(sender_id) #nice string with all tasks
             
-            bot.send_message(cid, text)
+            bot.send_message(cid, text, disable_web_page_preview=True) #if one of the tasks contains a link 
         else:
             bot.send_message(cid, 'Ура, все задачи выполнены! Можно отдыхать :)')
 
@@ -64,12 +78,13 @@ def main():
         uid, cid = get_basic_info(message)
         logging.info('Trying to add task for user {0}'.format(uid))
 
-        msg = bot.send_message(cid, 'Введи название задачи')
+        force_reply = types.ForceReply(selective=False)
+        msg = bot.send_message(cid, 'Введи название задачи', reply_markup=force_reply)
         def process_task_name(task_msg):
             task_text = task_msg.text
             task_manager.add_task(get_sender_id(task_msg), task_text)
             logging.info('Added task \'{0}\' to user {1}'.format(task_text, get_sender_id(task_msg)))
-            bot.send_message(get_chat_id(task_msg), 'Задача \'{0}\' добавлена успешно!'.format(task_text))
+            bot.send_message(get_chat_id(task_msg), 'Задача \'{0}\' добавлена успешно!'.format(task_text), disable_web_page_preview=True)
 
         bot.register_next_step_handler(msg, process_task_name)
 
@@ -106,7 +121,7 @@ def main():
 
             logging.info('Removing task \'{0}\' from user {1}'.format(task_name, uid))
             task_manager.remove_task(uid, task_name)
-            bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(task_name))
+            bot.send_message(cid, 'Задача \'{0}\' успешно удалена!'.format(task_name), disable_web_page_preview=True)
 
             new_tasks = task_manager.get_tasks(uid)
             if tasks != new_tasks:
@@ -127,7 +142,7 @@ def main():
 
     bot.enable_save_next_step_handlers(delay=2)
     bot.load_next_step_handlers()
-    bot.polling()
+    bot.infinity_polling(True)     
 
 if __name__ == "__main__":
     main()
