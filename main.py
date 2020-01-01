@@ -25,7 +25,7 @@ logging.basicConfig(
 
 def my_handler(type, value, tb):
     logging.exception('Uncaught exception: {0}'.format(str(value)), exc_info=True)
-
+    
 # Install exception handler for all uncaught exceptions
 sys.excepthook = my_handler
 
@@ -51,9 +51,10 @@ def main():
         log_data = open('Logs/app.log', 'rb')
         bot.send_document(constants.my_chat_id, data=log_data)
     
-    @bot.message_handler(commands=['throw'])
-    def throw(message):
-        raise IndexError()
+    @bot.message_handler(commands=['abort'])
+    def abort(message):
+        bot.reply_to(message, 'Aborting...')
+        os._exit(0)
 
     @bot.message_handler(commands=['ping'])
     def pong(message):
@@ -142,7 +143,7 @@ def main():
 
     bot.enable_save_next_step_handlers(delay=2)
     bot.load_next_step_handlers()
-    bot.infinity_polling(False)     
+    bot.infinity_polling(True)     
 
 if __name__ == "__main__":
     main()
