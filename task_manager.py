@@ -1,10 +1,13 @@
 import constants
-import json
+import json, os
 
 tasks = dict()
 
 def load_tasks():
     global tasks
+    if not os.path.exists(constants.json_storage):
+        open(constants.json_storage, 'w').close() #create the file in case it doesn't exist 
+
     with open(constants.json_storage, 'r') as f:
         s = f.readline()
         if s is not None and len(s) > 0:
