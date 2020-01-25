@@ -1,4 +1,4 @@
-bot_token = '1039129866:AAEFygyDe6FaBUC1NcD00-JtAA7Uj8OhqmY'
+bot_token = '1086078804:AAFtN1Fem9sx5MbNM3Wm-EmhMuZmntqy5Rk'
 
 my_chat_id = 1039129866
 

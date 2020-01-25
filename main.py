@@ -1,3 +1,5 @@
+import re
+
 import constants
 import task_manager
 
@@ -132,6 +134,74 @@ def main():
                 bot.edit_message_reply_markup(chat_id=cid, message_id=keyboard_message.message_id, reply_markup = new_markup)
                 tasks = list(new_tasks)
 
+    @bot.message_handler(commands=['add_schedule'])
+    def add_schedule(message):
+        from task import ScheduleTypes
+
+        uid, cid = get_basic_info(message)
+
+        force_reply = types.ForceReply(selective=False)
+        data = {'name': None, 'type': None, 'time': None, 'value': None}
+        type_convert = {
+            'Ежедневно': ScheduleTypes.DAILY,
+            #'Каждые х дней': ScheduleTypes.XDAYS,
+            'Еженедельно': ScheduleTypes.WEEKLY
+        }
+        def process_task_time(time_msg):
+            time_text = time_msg.text
+            pattern = re.compile('\d{1,2}:\d\d')
+            if not pattern.match(time_text):
+                bot.reply_to(time_msg, 'Введи время в формате HH:MM')
+
+                #Send time select once again
+                temp_msg = bot.send_message(get_chat_id(time_msg), 'В какое время напоминать о задаче? (В формате HH:MM)', reply_markup=force_reply)
+                bot.register_next_step_handler(temp_msg, process_task_time)
+                return
+            
+            #Avoid invalid time formats with things like '5:30'
+            if len(time_text) == 3:
+                time_text = '0' + time_text
+
+            data['time'] = time_text
+            def callback(task):
+                bot.send_message(task.owner_id, 'Напоминаю о задача: {0}'.format(task.name))
+
+            task_manager.add_schedule(uid, data['name'], data['type'], data['time'], callback)
+            bot.send_message(uid, 'Задача {0} успешно добавлена!'.format(data['name']))
+
+        def process_task_type(type_msg):
+            type_text = type_msg.text
+            if type_text not in type_convert:
+                bot.reply_to(type_msg, 'Нажми на одну из кнопок для выбора')
+
+                #Send type select once again
+                type_select = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+                type_select.add(*list(type_convert.keys()))
+                temp_msg = bot.send_message(get_chat_id(type_msg), 'Как часто напоминать о задаче?', reply_markup=type_select)
+                bot.register_next_step_handler(temp_msg, process_task_type)   
+
+                return
+
+            data['type'] = type_convert[type_text]
+            temp_msg = bot.send_message(get_chat_id(type_msg), 'В какое время напоминать о задаче? (В формате HH:MM)', reply_markup=force_reply)
+            bot.register_next_step_handler(temp_msg, process_task_time)
+
+
+        def process_task_name(task_msg):
+            task_text = task_msg.text
+            data['name'] = task_text
+            type_select = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+            type_select.add(*list(type_convert.keys()))
+            name_msg = bot.send_message(get_chat_id(task_msg), 'Как часто напоминать о задаче?', reply_markup=type_select)
+            bot.register_next_step_handler(name_msg, process_task_type)
+
+        first_msg = bot.send_message(cid, 'Введите название задачи', reply_markup=force_reply)
+        bot.register_next_step_handler(first_msg, process_task_name)
+
+    @bot.message_handler(commands=['remove_schedule'])
+    def remove_schedule(message):
+        pass
+
     #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)
     def handle_text(message):
@@ -143,8 +213,19 @@ def main():
 
     bot.enable_save_next_step_handlers(delay=2)
     bot.load_next_step_handlers()
-    bot.infinity_polling(True)   
+
+    from threading import Thread
+    def run():
+        bot.infinity_polling(True)
+    polling_thread = Thread(target=run)
+    polling_thread.setDaemon(False)
+    polling_thread.start()   
     print('Start polling...')
+
+    import schedule
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()

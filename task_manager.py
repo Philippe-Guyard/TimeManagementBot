@@ -2,6 +2,7 @@ import constants
 import json, os
 
 tasks = dict()
+schedules = dict()
 
 def load_tasks():
     global tasks
@@ -53,3 +54,19 @@ def show_tasks(user_id):
         nice_task_string += '-{0}\n'.format(item)
 
     return nice_task_string
+
+import task
+
+def add_schedule(user_id, name, stype, ttime, callback, value=None):
+    schedule = task.Schedule(stype, ttime, value)
+    next_task = task.Task(user_id, name, schedule)
+    next_task.start(callback)
+
+    if user_id in schedules:
+        schedules[user_id].append(next_task)
+    else:
+        schedules[user_id] = [next_task]
+
+
+
+
