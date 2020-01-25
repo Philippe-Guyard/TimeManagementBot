@@ -130,6 +130,7 @@ dmypy.json
 
 #misc files
 data.txt
+schedule_data.txt
 .handler-saves/
 Logs/
 myenv/

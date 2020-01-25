@@ -1,6 +1,8 @@
 import constants
 import json, os
 
+import pickle
+
 tasks = dict()
 schedules = dict()
 
@@ -57,6 +59,18 @@ def show_tasks(user_id):
 
 import task
 
+def save_schedules():
+    with open(constants.pickle_storage, 'wb') as f:
+        pickle.dump(schedules, f)
+
+def load_schedules():
+    if not os.path.exists(constants.pickle_storage):
+        open(constants.pickle_storage, 'w').close()
+    
+    global schedules
+    with open(constants.pickle_storage, 'rb') as f:
+        schedules = pickle.load(f)
+
 def add_schedule(user_id, name, stype, ttime, callback, value=None):
     schedule = task.Schedule(stype, ttime, value)
     next_task = task.Task(user_id, name, schedule)
@@ -67,6 +81,15 @@ def add_schedule(user_id, name, stype, ttime, callback, value=None):
     else:
         schedules[user_id] = [next_task]
 
+    save_schedules()
 
+def remove_schedule(user_id, name):
+    if user_id not in schedules:
+        return False
 
+    old_len = len(schedules[user_id])
+    schedules[user_id] = [x for x in schedules[user_id] if x.name != name]
+    if old_len == len(schedules[user_id]): #nothing changed
+        return False
 
+    save_schedules()

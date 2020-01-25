@@ -33,6 +33,7 @@ sys.excepthook = my_handler
 
 def main():
     task_manager.load_tasks()
+    task_manager.load_schedules()
 
     get_sender_id = lambda msg: msg.from_user.id
     get_chat_id = lambda msg: msg.chat.id
