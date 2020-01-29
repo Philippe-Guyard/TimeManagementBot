@@ -54,10 +54,17 @@ def main():
         log_data = open('Logs/app.log', 'rb')
         bot.send_document(constants.my_chat_id, data=log_data)
     
+    def urgent_bot_callback(uid, cid):
+        if task_manager.has_urgent(uid):
+            urgent = task_manager.show_urgent(uid)
+            bot.send_message(cid, urgent, disable_web_page_preview=True)
+    
+    '''
     @bot.message_handler(commands=['abort'])
     def abort(message):
         bot.reply_to(message, 'Aborting...')
         os._exit(0)
+    '''
 
     @bot.message_handler(commands=['ping'])
     def pong(message):
@@ -199,9 +206,95 @@ def main():
         first_msg = bot.send_message(cid, 'Введите название задачи', reply_markup=force_reply)
         bot.register_next_step_handler(first_msg, process_task_name)
 
+    @bot.message_handler(commands=['show_schedules'])
+    def show_schedules(message):
+        pass
+
     @bot.message_handler(commands=['remove_schedule'])
     def remove_schedule(message):
         pass
+
+    @bot.message_handler(commands=['configure_urgent'])
+    def configure_urgent(message):
+        uid, cid = get_basic_info(message)
+        
+        bot.send_message(cid, 'Сейчас я помогу тебе настроить список срочных дел...')
+        time.sleep(1)
+        force_reply = types.ForceReply(selective=False)
+        def process_time(time_msg):
+            time_text = time_msg.text
+            pattern = re.compile('\d{1,2}:\d\d')
+            if not pattern.match(time_text):
+                temp_msg = bot.send_message(cid, 'Ты отправил время в неправильном формате. Пожалуйста, отправь время в формате HH:MM', reply_markup=force_reply)
+
+                bot.register_next_step_handler(temp_msg, process_time)
+                return
+
+            if len(time_text) == 3:
+                time_text = '0' + time_text
+            
+            bot.send_message(cid, 'Отлично. Теперь я смогу чаще напоминать тебе о срочных делах')
+            task_manager.reconfigure_urgent(uid, cid, time_text, urgent_bot_callback)
+
+        msg = bot.send_message(cid, 
+          'Отправь мне время в формате HH:MM. Я буду напоминать тебе о твоих срочных задачах каждые HH часов MM минут!',
+          reply_markup=force_reply)
+        bot.register_next_step_handler(msg, process_time)
+
+    @bot.message_handler(commands=['add_urgent'])    
+    def add_urgent(message):
+        uid, cid = get_basic_info(message)
+        
+        force_reply = types.ForceReply(selective=False)
+        def process_task_name(task_msg):
+            task_text = task_msg.text
+            task_manager.add_urgent(get_sender_id(task_msg), task_text)
+            bot.send_message(get_chat_id(task_msg), 'Задача \'{0}\' успешно добавлена в срочный список!'.format(task_text), disable_web_page_preview=True)
+
+        msg = bot.send_message(cid, 'Введи название задачи', reply_markup=force_reply)
+        bot.register_next_step_handler(msg, process_task_name)
+
+    @bot.message_handler(commands=['remove_urgent'])
+    def remove_urgent(message):
+        uid, cid = get_basic_info(message)
+
+        if not task_manager.has_urgent(uid):
+            bot.send_message(cid, 'Срочный список пуст. Удалять нечего')
+            return 
+
+        tasks = task_manager.get_urgent(uid)
+
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        btns = [types.InlineKeyboardButton(task, callback_data=str(idx)) for idx, task in enumerate(tasks)]
+        markup.add(*btns)
+
+        keyboard_message = bot.send_message(cid, 'Что удалить?', reply_markup=markup)
+
+        @bot.callback_query_handler(func=lambda call: True)
+        def remove(call):
+            if not task_manager.has_urgent(uid):
+                return
+
+            nonlocal tasks
+            task_name = ''
+            try:
+                task_name = tasks[int(call.data)]
+            except IndexError:
+                logging.error('Index error occured, aborting remove task...')
+                logging.error('Tasks: {0}; index: {1}'.format(tasks, call.data))
+                bot.send_message(cid, 'Возникла внутреняя ошибка. Попробуйте позже...')
+                return
+
+            task_manager.remove_urgent(uid, task_name)
+            bot.send_message(cid, 'Задача \'{0}\' успешно удалена из срочного списка!'.format(task_name), disable_web_page_preview=True)
+
+            new_tasks = task_manager.get_urgent(uid)
+            if tasks != new_tasks:
+                new_markup = types.InlineKeyboardMarkup(row_width=3)
+                btns = [types.InlineKeyboardButton(task, callback_data=str(idx)) for idx, task in enumerate(new_tasks)]
+                new_markup.add(*btns)
+                bot.edit_message_reply_markup(chat_id=cid, message_id=keyboard_message.message_id, reply_markup = new_markup)
+                tasks = list(new_tasks)
 
     #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)

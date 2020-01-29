@@ -3,8 +3,13 @@ import json, os
 
 import pickle
 
+'''
+########################################################################################
+From here only working with tasks
+########################################################################################
+'''
+
 tasks = dict()
-schedules = dict()
 
 def load_tasks():
     global tasks
@@ -45,6 +50,7 @@ def remove_task(user_id, task_name):
         return False
     
     save_tasks()
+    return True
 
 #returns all user tasks inside list
 def get_tasks(user_id):
@@ -57,7 +63,15 @@ def show_tasks(user_id):
 
     return nice_task_string
 
+
+'''
+########################################################################################
+From here only working with schedules
+########################################################################################
+'''
 import task
+
+schedules = dict()
 
 def save_schedules():
     with open(constants.pickle_storage, 'wb') as f:
@@ -93,3 +107,56 @@ def remove_schedule(user_id, name):
         return False
 
     save_schedules()
+    return True
+
+
+'''
+########################################################################################
+From here only working with urgent
+########################################################################################
+'''
+import schedule
+
+urgent = dict()
+urgent_task = dict()
+
+def add_urgent(uid, name):
+    if uid in urgent:
+        urgent[uid].append(name)
+    else:
+        urgent[uid] = [name]
+
+def remove_urgent(uid, name):
+    if uid in urgent:
+        if name in urgent[uid]:
+            urgent[uid].remove(name)
+            return True
+        else:
+            return False
+    else:
+        return False
+
+#new_interval is of format 'hh:mm'
+def reconfigure_urgent(uid, cid, new_interval, bot_callback):
+    hours, minutes = map(int, new_interval.split(':'))
+    total_mins = hours * 60 + minutes
+
+    if uid in urgent_task:
+        schedule.cancel_job(urgent_task[uid]) #cancel previous job
+    schedule.every(total_mins).minutes.do(bot_callback, uid, cid) #create new job
+
+def get_urgent(user_id):
+    if user_id in urgent:
+        return urgent[user_id]
+    else:
+        return []
+
+def has_urgent(user_id):
+    return user_id in urgent and len(urgent[user_id]) > 0
+
+def show_urgent(user_id):
+    nice_task_string = 'Напоминаю о твоих срочных задачах:\n'
+    for item in urgent[user_id]:
+        nice_task_string += '-{0}\n'.format(item)
+
+    return nice_task_string

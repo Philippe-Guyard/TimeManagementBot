@@ -24,11 +24,11 @@ class Schedule:
     #callback is called at needed time
     def start(self, callback, source_task):
         if self.sch_type == ScheduleTypes.DAILY:
-            schedule.every().day.at(self.trigger_time).do(callback, source_task)
+            self.job = schedule.every().day.at(self.trigger_time).do(callback, source_task)
         elif self.sch_type == ScheduleTypes.XDAYS:
-            schedule.every(self.value).days.at(self.trigger_time).do(callback, source_task)
+            self.job = schedule.every(self.value).days.at(self.trigger_time).do(callback, source_task)
         elif self.sch_type == ScheduleTypes.WEEKLY:
-            schedule.every().week.at(self.trigger_time).do(callback, source_task) 
+            self.job = schedule.every().week.at(self.trigger_time).do(callback, source_task) 
         else:
             logging.info('Unknown schedule type: {0}'.format(self.sch_type))
 
@@ -49,3 +49,11 @@ class Task:
                 self.task_schedule.start(callback, self)
         
         self.started = True
+
+    def end(self):
+        schedule.cancel_job(self.task_schedule.job)
+
+    #Task as pretty str.
+    #Example: 'Do something (! 3 hours and 27 minutes left !)'
+    def pretty_str(self):
+        pass
