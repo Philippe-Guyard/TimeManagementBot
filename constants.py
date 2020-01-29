@@ -1,4 +1,4 @@
-bot_token = '1086078804:AAFtN1Fem9sx5MbNM3Wm-EmhMuZmntqy5Rk'
+bot_token = '1039129866:AAEFygyDe6FaBUC1NcD00-JtAA7Uj8OhqmY'
 
 schedule_storage = 'schedule_data.txt'
 task_storage = 'data.txt'
