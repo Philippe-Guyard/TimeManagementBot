@@ -13,10 +13,10 @@ tasks = dict()
 
 def load_tasks():
     global tasks
-    if not os.path.exists(constants.json_storage):
-        open(constants.json_storage, 'w').close() #create the file in case it doesn't exist 
+    if not os.path.exists(constants.task_storage):
+        open(constants.task_storage, 'w').close() #create the file in case it doesn't exist 
 
-    with open(constants.json_storage, 'r') as f:
+    with open(constants.task_storage, 'r') as f:
         s = f.readline()
         if s is not None and len(s) > 0:
             tasks = json.loads(s)
@@ -26,7 +26,7 @@ def load_tasks():
 
 def save_tasks():
     global tasks
-    with open(constants.json_storage, 'w') as f:
+    with open(constants.task_storage, 'w') as f:
         f.write(json.dumps(tasks))
 
 def has_tasks(user_id):
@@ -74,15 +74,15 @@ import task
 schedules = dict()
 
 def save_schedules():
-    with open(constants.pickle_storage, 'wb') as f:
+    with open(constants.schedule_storage, 'wb') as f:
         pickle.dump(schedules, f)
 
 def load_schedules():
-    if not os.path.exists(constants.pickle_storage):
-        open(constants.pickle_storage, 'w').close()
+    if not os.path.exists(constants.schedule_storage):
+        open(constants.schedule_storage, 'w').close()
     
     global schedules
-    with open(constants.pickle_storage, 'rb') as f:
+    with open(constants.schedule_storage, 'rb') as f:
         schedules = pickle.load(f)
 
 def add_schedule(user_id, name, stype, ttime, callback, value=None):
@@ -120,16 +120,34 @@ import schedule
 urgent = dict()
 urgent_task = dict()
 
+def save_urgent():
+    with open(constants.urgent_storage, 'wb') as f:
+        pickle.dump(urgent, f)
+
+def load_urgent():
+    if not os.path.exists(constants.urgent_storage):
+        open(constants.urgent_storage, 'w').close()
+    
+    global urgent
+    try:
+        with open(constants.urgent_storage, 'rb') as f:
+            urgent = pickle.load(f)
+    except: #
+        urgent = dict()
+    
 def add_urgent(uid, name):
     if uid in urgent:
         urgent[uid].append(name)
     else:
         urgent[uid] = [name]
+    
+    save_urgent()
 
 def remove_urgent(uid, name):
     if uid in urgent:
         if name in urgent[uid]:
             urgent[uid].remove(name)
+            save_urgent()
             return True
         else:
             return False

@@ -34,6 +34,7 @@ sys.excepthook = my_handler
 def main():
     task_manager.load_tasks()
     task_manager.load_schedules()
+    task_manager.load_urgent()
 
     get_sender_id = lambda msg: msg.from_user.id
     get_chat_id = lambda msg: msg.chat.id
@@ -46,14 +47,6 @@ def main():
     bot = telebot.TeleBot(constants.bot_token)
     bot.set_update_listener(listener)
 
-    if send_sorry:
-        bot.send_message(constants.my_chat_id, 'Произошла неизвестная ошибка в работе бота. Вот последние логи:')
-
-        if not os.path.exists('Logs/app.log'):
-            open('Logs/app.log', 'w').close() #create the file if it doesn't exist
-        log_data = open('Logs/app.log', 'rb')
-        bot.send_document(constants.my_chat_id, data=log_data)
-    
     def urgent_bot_callback(uid, cid):
         if task_manager.has_urgent(uid):
             urgent = task_manager.show_urgent(uid)
@@ -295,6 +288,12 @@ def main():
                 new_markup.add(*btns)
                 bot.edit_message_reply_markup(chat_id=cid, message_id=keyboard_message.message_id, reply_markup = new_markup)
                 tasks = list(new_tasks)
+
+    @bot.message_handler(commands=['show_urgent'])
+    def show_urgent(message):
+        uid, cid = get_basic_info(message)
+
+        urgent_bot_callback(uid, cid)
 
     #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)
