@@ -131,7 +131,9 @@ dmypy.json
 #misc files
 data.txt
 schedule_data.txt
+urgent_data.txt
 .handler-saves/
 Logs/
 myenv/
 my_env/
+*.nohup
