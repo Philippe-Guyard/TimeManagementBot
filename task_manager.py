@@ -82,8 +82,12 @@ def load_schedules():
         open(constants.schedule_storage, 'w').close()
     
     global schedules
-    with open(constants.schedule_storage, 'rb') as f:
-        schedules = pickle.load(f)
+    try:
+        with open(constants.schedule_storage, 'rb') as f:
+            schedules = pickle.load(f)
+    except:
+        schedules = dict()
+
 
 def add_schedule(user_id, name, stype, ttime, callback, value=None):
     schedule = task.Schedule(stype, ttime, value)
