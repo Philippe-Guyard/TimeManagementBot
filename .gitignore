@@ -137,3 +137,5 @@ Logs/
 myenv/
 my_env/
 *.nohup
+nohup.*
+constants.py
