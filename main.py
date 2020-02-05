@@ -314,7 +314,7 @@ def main():
         markup = types.InlineKeyboardMarkup(row_width=1)
         btns = []
         btns.append(types.InlineKeyboardButton('Создать новую', callback_data='add'))
-        #btns.append(types.InlineKeyboardButton('Показать все', callback_data='show'))
+        btns.append(types.InlineKeyboardButton('Показать все', callback_data='show'))
         markup.add(*btns)
 
         bot.send_message(cid, 'Настройки рутинных задач', reply_markup=markup)
@@ -401,7 +401,7 @@ def main():
             def more_info_routine(call):
                 name = names[int(call.data)]
                 info_markup = types.InlineKeyboardMarkup(row_width=1)
-                info_markup.add(types.InlineKeyboardButton('Изменить дни', callback_data='change'))
+                #info_markup.add(types.InlineKeyboardButton('Изменить дни', callback_data='change'))
                 info_markup.add(types.InlineKeyboardButton('Удалить', callback_data='remove'))
 
                 bot.edit_message_text(name, cid, mid)
