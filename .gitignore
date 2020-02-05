@@ -132,6 +132,7 @@ dmypy.json
 data.txt
 schedule_data.txt
 urgent_data.txt
+routine_data.txt
 .handler-saves/
 Logs/
 myenv/

@@ -35,6 +35,7 @@ def main():
     task_manager.load_tasks()
     task_manager.load_schedules()
     task_manager.load_urgent()
+    task_manager.load_routine()
 
     get_sender_id = lambda msg: msg.from_user.id
     get_chat_id = lambda msg: msg.chat.id
@@ -46,6 +47,12 @@ def main():
 
     bot = telebot.TeleBot(constants.bot_token)
     bot.set_update_listener(listener)
+
+    def remove_callback_query_handler(func):
+        for handler in bot.callback_query_handlers:
+            if handler['function'] == func:
+                del handler
+                break
 
     def urgent_bot_callback(uid, cid):
         if task_manager.has_urgent(uid):
@@ -150,6 +157,9 @@ def main():
         }
         def process_task_time(time_msg):
             time_text = time_msg.text
+            if len(time_text) > 4:
+                time_text = time_text[:4]
+
             pattern = re.compile('\d{1,2}:\d\d')
             if not pattern.match(time_text):
                 bot.reply_to(time_msg, 'Введи время в формате HH:MM')
@@ -295,7 +305,116 @@ def main():
 
         urgent_bot_callback(uid, cid)
 
-    #This should always be last decorator as this is like 'default' option in switch statement (handles any message)
+    @bot.message_handler(commands=['routine'])
+    def show_routine_menu(message):
+        bot.callback_query_handlers.clear() #remove all previous callback query handlers so they don't interfere with new ones here
+
+        uid, cid = get_basic_info(message)
+
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        btns = []
+        btns.append(types.InlineKeyboardButton('Создать новую', callback_data='add'))
+        #btns.append(types.InlineKeyboardButton('Показать все', callback_data='show'))
+        markup.add(*btns)
+
+        bot.send_message(cid, 'Настройки рутинных задач', reply_markup=markup)
+
+        @bot.callback_query_handler(func = lambda call: call.data == 'add')
+        def add_routine(main_call):
+            from task import ScheduleTypes
+
+            force_reply = types.ForceReply(selective=False)
+            type_convert = {
+                'Понедельник': ScheduleTypes.MONDAY,
+                'Вторник': ScheduleTypes.TUESDAY,
+                'Среда': ScheduleTypes.WEDNESDAY,
+                'Четверг': ScheduleTypes.THURSDAY,
+                'Пятница': ScheduleTypes.FRIDAY,
+                'Суббота': ScheduleTypes.SATURDAY,
+                'Воскресенье': ScheduleTypes.SUNDAY,
+            }
+
+            def process_task_name(task_msg):
+                task_text = task_msg.text
+                type_select = types.InlineKeyboardMarkup(row_width=2)
+                keys = list(type_convert.keys()) + ['Конец']
+                type_select.add(*(types.InlineKeyboardButton(x, callback_data=x) for x in keys))
+                days_msg = bot.send_message(cid, 'В какие дни рутину нужно выполнять? (Нажми на кнопки нужных дней, затем нажми \'Конец\', чтобы закончить ввод дней)', reply_markup=type_select)
+                schedule_days = []
+
+                @bot.callback_query_handler(func = lambda call : True)
+                def add_day(call):
+                    if call.data == 'Конец':
+                        task_manager.add_routine(uid, task_text, schedule_days)
+                        bot.send_message(cid, 'Рутина \'{0}\' добавлена успешно'.format(task_text))
+                        bot.edit_message_reply_markup(cid, days_msg.message_id, reply_markup=None)
+
+                        remove_callback_query_handler(add_day) #remove this handler because it has reads any call
+                        return
+
+                    schedule_days.append(type_convert[call.data])
+                    #format callback data 
+                    s = list(call.data)
+                    if s[-1] == 'а':
+                        s[-1] = 'у'
+                    s = ''.join(s)
+                    bot.send_message(cid, 'Теперь я буду напоминать о рутине в {0}'.format(s))
+
+                    keys.remove(call.data)
+                    type_select = types.InlineKeyboardMarkup(row_width=2)
+                    type_select.add(*(types.InlineKeyboardButton(x, callback_data=x) for x in keys))
+
+                    bot.edit_message_reply_markup(cid, days_msg.message_id, reply_markup=type_select)
+
+            first_msg = bot.send_message(cid, 'Введи название рутины', reply_markup=force_reply)
+            bot.register_next_step_handler(first_msg, process_task_name)
+        
+        @bot.callback_query_handler(func = lambda call: call.data == 'show')
+        def show_routines(main_call):
+            routines = task_manager.get_routines(uid)
+            if routines is None:
+                bot.send_message(cid, 'Нет рутин.')
+                return
+
+            names = [x['name'] for x in routines]
+
+            initial_markup = types.InlineKeyboardMarkup(row_width=2)
+            btns = (types.InlineKeyboardButton(name, callback_data=str(names.index(name))) for name in names)
+            initial_markup.add(*btns)
+
+            intial_text = 'Твои рутины:'
+            initial_msg = bot.send_message(cid, intial_text, reply_markup=initial_markup)
+            mid = initial_msg.message_id
+
+            def reset():
+                bot.edit_message_text(intial_text, cid, mid)
+                bot.edit_message_reply_markup(cid, mid, reply_markup=initial_markup)
+
+            def call_is_int(call):
+                try:
+                    int(call.data)
+                    return True
+                except:
+                    return False
+
+            @bot.callback_query_handler(func = call_is_int)
+            def more_info_routine(call):
+                name = names[int(call.data)]
+                info_markup = types.InlineKeyboardMarkup(row_width=1)
+                info_markup.add(types.InlineKeyboardButton('Изменить дни', callback_data='change'))
+                info_markup.add(types.InlineKeyboardButton('Удалить', callback_data='remove'))
+
+                bot.edit_message_text(name, cid, mid)
+                bot.edit_message_reply_markup(cid, mid, reply_markup=info_markup)
+
+                @bot.callback_query_handler(func = lambda call: call.data == 'remove')
+                def remove_routine(call):
+                    task_manager.remove_routine(uid, name)
+                    bot.send_message(cid, 'Рутина \'{0}\' успешно удалена'.format(name))
+
+                    reset()
+
+    #This is like 'default' option in switch statement (handles any message)
     @bot.message_handler(func=lambda msg: True)
     def handle_text(message):
         sender_id = get_sender_id(message)
@@ -317,6 +436,8 @@ def main():
 
     import schedule
     while True:
+        if not polling_thread.is_alive():
+            break
         schedule.run_pending()
         time.sleep(1)
 

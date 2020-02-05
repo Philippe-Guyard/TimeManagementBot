@@ -182,3 +182,100 @@ def show_urgent(user_id):
         nice_task_string += '-{0}\n'.format(item)
 
     return nice_task_string
+
+'''
+########################################################################################
+From here only working with routine
+########################################################################################
+'''
+from task import ScheduleTypes
+
+routines = dict()
+routines_convert_back = {
+    'Понедельник': ScheduleTypes.MONDAY,
+    'Вторник': ScheduleTypes.TUESDAY,
+    'Среда': ScheduleTypes.WEDNESDAY,
+    'Четверг': ScheduleTypes.THURSDAY,
+    'Пятница': ScheduleTypes.FRIDAY,
+    'Суббота': ScheduleTypes.SATURDAY,
+    'Воскресенье': ScheduleTypes.SUNDAY,
+}
+routines_convert = dict()
+for key, value in routines_convert_back.items():
+    routines_convert[value] = key
+
+def save_routines():
+    def dump_routines(f_handler):
+        new_routines = dict()
+        for uid, routines_list in routines.items():
+            new_routines[uid] = []
+            for routine in routines_list:
+                new_days = list()
+                for day in routine['days']:
+                    new_days.append(routines_convert[day])
+                
+                new_routines[uid].append({'name': routine['name'], 'days': new_days})
+
+        pickle.dump(new_routines, f_handler)
+
+    with open(constants.routine_storage, 'wb') as f:
+        dump_routines(f)
+
+def load_routine():
+    if not os.path.exists(constants.routine_storage):
+        open(constants.routine_storage, 'w').close()
+    
+    temp_routines = dict()
+    try:
+        with open(constants.routine_storage, 'rb') as f:
+            temp_routines = pickle.load(f)
+    except: #
+        temp_routines = dict()
+    
+    global routines
+    for uid, routines_list in temp_routines.items():
+            routines[uid] = []
+            for routine in routines_list:
+                new_days = list()
+                for day in routine['days']:
+                    new_days.append(routines_convert_back[day])
+                
+                routines[uid].append({'name': routine['name'], 'days': new_days})
+
+
+    def callback(owner_id, name):
+        add_task(owner_id, name)
+    for uid, rtns in routines.items():
+        for routine in rtns:
+            for day in routine['days']:
+                day.value.do(callback, uid, routine['name'])
+                
+
+def add_routine(uid, name, days):
+    def callback(owner_id, name):
+        add_task(owner_id, name)
+
+    #day is already of type schedule.every().monday/tuesday...
+    for day in days:
+        day.value.do(callback, uid, name)
+    
+    if uid in routines:
+        routines[uid].append({'name': name, 'days': days})
+    else:
+        routines[uid] = [{'name': name, 'days': days}]
+    
+    save_routines()
+
+def remove_routine(uid, name):
+    if uid in routines:
+        routines[uid] = list(filter(lambda x: x['name'] != name, routines[uid]))
+        save_routines()
+        return True
+
+    return False
+
+def get_routines(uid):
+    if uid in routines and len(routines[uid]) > 0:
+        return routines[uid]
+
+    return None

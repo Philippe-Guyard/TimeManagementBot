@@ -6,7 +6,18 @@ import schedule
 class ScheduleTypes(Enum):
     DAILY = 1 #repeat every day
     XDAYS = 2 #repeat every X days
-    WEEKLY = 3 #repeat every week 
+    WEEKLY = 3 #repeat every week
+
+    #Simplify code like this for weekdays 
+    MONDAY = schedule.every().monday 
+    TUESDAY = schedule.every().tuesday
+    WEDNESDAY = schedule.every().wednesday
+    THURSDAY = schedule.every().thursday
+    FRIDAY = schedule.every().friday
+    SATURDAY = schedule.every().saturday
+    SUNDAY = schedule.every().sunday
+
+    WEEKDAYS = (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY)
 
 class Schedule:
     '''
@@ -22,7 +33,7 @@ class Schedule:
             self.value = value
     
     #callback is called at needed time
-    def start(self, callback, source_task):
+    def start(self, callback, source_task): 
         if self.sch_type == ScheduleTypes.DAILY:
             self.job = schedule.every().day.at(self.trigger_time).do(callback, source_task)
         elif self.sch_type == ScheduleTypes.XDAYS:
